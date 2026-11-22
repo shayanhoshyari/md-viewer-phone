@@ -1,0 +1,3 @@
+# Not served: the binary folder's files for `google-mcp files` (drive-files skill).
+.gitignore
+files.toml

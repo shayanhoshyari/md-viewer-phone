@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Life" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Life</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <link rel="icon" href="icons/icon-192.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="vendor/markdown-it.min.js"></script>
+    <script src="vendor/purify.min.js"></script>
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header class="bar">
+      <nav class="tabs">
+        <a id="tab-now" href="#now">Now</a>
+        <a id="tab-life" href="#life/todo.md">Life</a>
+        <a id="tab-repo" href="#repo">Repo</a>
+      </nav>
+      <button id="sign-out" class="link" type="button" hidden>Sign out</button>
+    </header>
+
+    <section id="sign-in" class="panel" hidden>
+      <button id="sign-in-button" class="primary" type="button">Sign in with GitHub</button>
+      <p id="sign-in-error" class="error" hidden></p>
+    </section>
+
+    <main>
+      <section id="now" hidden>
+        <label for="now-inbox">Todo inbox</label>
+        <p class="hint">To-dos for Claude to file into the list, then clear.</p>
+        <textarea id="now-inbox" rows="8" spellcheck="true" autocapitalize="sentences"></textarea>
+        <nav id="now-inbox-links" class="box-links" hidden></nav>
+        <label for="now-other">Other inbox</label>
+        <p class="hint">Notes for other areas, each under its own <code>### Heading</code>.</p>
+        <textarea id="now-other" rows="8" spellcheck="true" autocapitalize="sentences"></textarea>
+        <nav id="now-other-links" class="box-links" hidden></nav>
+        <label for="now-mind">Mind</label>
+        <p class="hint">Free notes, left alone.</p>
+        <textarea id="now-mind" rows="8" spellcheck="true" autocapitalize="sentences"></textarea>
+        <nav id="now-mind-links" class="box-links" hidden></nav>
+        <div class="actions">
+          <button id="now-commit" class="primary" type="button">Commit</button>
+          <button id="now-discard" class="primary danger" type="button" hidden>Discard</button>
+          <span id="now-dirty" class="dirty" hidden>Not committed</span>
+        </div>
+        <p id="now-status" class="status" role="status"></p>
+      </section>
+
+      <section id="view" hidden>
+        <nav id="view-crumbs" class="crumbs"></nav>
+        <p id="view-status" class="status" role="status"></p>
+        <article id="view-content" class="content"></article>
+      </section>
+    </main>
+  </body>
+</html>
