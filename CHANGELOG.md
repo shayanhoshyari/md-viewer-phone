@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0 - 2026-11-23
+
+- Now: each box grows to fit its text, in the system font rather than monospace. Focusing a
+  box fills the screen above the keyboard with it, keeping Commit below; **Done** goes back.
+  There, **Preview** renders the box's markdown, and tapping a task's checkbox ticks it in the
+  text.
+- Now: the links under a box are one per line, and say where they go: the page's own links
+  show the repo path they open (with ` § heading` for one), others their host, path and hash.
+- The top bar has **‹ › ↻**: back, forward and reload, for the home-screen app, which has no
+  browser buttons; the reload also picks up a new deploy.
+- Buttons and links show a pressed look on the phone.
+
 ## 0.8.0 - 2026-11-21
 
 - Settings: the repo, the GitHub App's client ID and the `now.md` path come from the Worker's

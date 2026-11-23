@@ -127,15 +127,45 @@ export function same(a, b) {
 
 const URL_RE = /https?:\/\/[^\s<>"'`]+/g;
 
+/** @param {string} text */
+function decoded(text) {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
 /**
- * The web links in a box's text, for the tappable row under it: deduplicated, trailing
+ * The label of a link to the page's own address, by its hash: the repo path it opens (a
+ * `#life/…` path with Life's folder in front), ` § <id>` for a `?a=<id>`, or `now`.
+ * @param {string} hash such as `#life/todo.md?a=notes`
+ * @param {string} folder Life's folder, a repo path ("" for the repo root)
+ */
+function ownLabel(hash, folder) {
+  const [main, query = ""] = hash.replace(/^#/, "").split("?");
+  const anchor = new URLSearchParams(query).get("a") ?? "";
+  const slash = main.indexOf("/");
+  const tab = slash < 0 ? main : main.slice(0, slash);
+  const rest = decoded(slash < 0 ? "" : main.slice(slash + 1)).replace(/^\/+|\/+$/g, "");
+  let label;
+  if (tab === "repo") label = rest || "repo";
+  else if (tab === "life") label = [folder, rest].filter(Boolean).join("/") || "life";
+  else if (tab === "now" || tab === "") label = "now";
+  else label = decoded(main);
+  return anchor ? `${label} § ${anchor}` : label;
+}
+
+/**
+ * The web links in a box's text, for the tappable rows under it: deduplicated, trailing
  * punctuation dropped. A link to the page itself (`origin`) becomes just its hash, so it opens
- * in place.
+ * in place, labelled with the repo path it opens; any other is labelled host, path and hash.
  * @param {string} text
  * @param {string} origin the page's own origin, such as https://phone.example.workers.dev
+ * @param {string} [folder] Life's folder, a repo path ("" for the repo root)
  * @returns {{ href: string, label: string, inside: boolean }[]}
  */
-export function links(text, origin) {
+export function links(text, origin, folder = "") {
   /** @type {Map<string, { href: string, label: string, inside: boolean }>} */
   const found = new Map();
   for (const match of text.matchAll(URL_RE)) {
@@ -149,10 +179,43 @@ export function links(text, origin) {
     const inside = parsed.origin === origin;
     const href = inside ? parsed.hash || "#now" : parsed.href;
     if (found.has(href)) continue;
-    const label = inside
-      ? decodeURIComponent(href.slice(1)) || "now"
-      : `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+    const path = parsed.pathname === "/" && !parsed.hash ? "" : parsed.pathname;
+    const label = inside ? ownLabel(href, folder) : decoded(`${parsed.host}${path}${parsed.hash}`);
     found.set(href, { href, label, inside });
   }
   return [...found.values()];
+}
+
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
+const TASK_RE = /^(\s*(?:[-*+]|\d{1,9}[.)])[ \t]+)\[([ xX])\](?=[ \t]+\S)/;
+
+/**
+ * Flip the `n`th task checkbox in markdown text (0-based): `[ ]` becomes `[x]`, and `[x]` or
+ * `[X]` becomes `[ ]`. Tasks are list items opening with a checkbox, counted in order and
+ * skipping fenced code, as the preview renders them. Out of range, the text is unchanged.
+ * @param {string} text
+ * @param {number} n
+ */
+export function toggleTask(text, n) {
+  const lines = text.split("\n");
+  let fence = "";
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const open = lines[i].match(FENCE_RE);
+    if (fence) {
+      if (open && open[1][0] === fence[0] && open[1].length >= fence.length) fence = "";
+      continue;
+    }
+    if (open) {
+      fence = open[1];
+      continue;
+    }
+    const task = lines[i].match(TASK_RE);
+    if (!task) continue;
+    if (count++ !== n) continue;
+    const mark = task[2] === " " ? "x" : " ";
+    lines[i] = `${task[1]}[${mark}]${lines[i].slice(task[0].length)}`;
+    return lines.join("\n");
+  }
+  return text;
 }

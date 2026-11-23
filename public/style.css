@@ -32,6 +32,7 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -86,11 +87,42 @@ button {
   border-bottom-color: var(--accent);
 }
 
+@media (max-width: 420px) {
+  .tabs a {
+    padding: 12px 9px;
+  }
+}
+
+.bar-tools {
+  display: flex;
+  align-items: center;
+}
+
 .link {
   background: none;
   border: none;
+  border-radius: 999px;
   color: var(--muted);
-  padding: 12px 0;
+  padding: 6px 10px;
+}
+
+.link.icon {
+  min-width: 36px;
+  padding: 4px 8px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Pressed look; iOS applies :active once the page has a touchstart listener (app.js). */
+.link:active,
+.tabs a:active,
+.box-links a:active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.tabs a:active {
+  border-radius: 8px;
 }
 
 .primary {
@@ -100,6 +132,10 @@ button {
   border-radius: 8px;
   padding: 10px 20px;
   font-weight: 600;
+}
+
+.primary:active:not(:disabled) {
+  filter: brightness(0.8);
 }
 
 .primary:disabled {
@@ -130,30 +166,115 @@ label {
   font-weight: 600;
 }
 
+.box-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.box-tools {
+  display: none;
+  gap: 4px;
+}
+
 textarea {
   display: block;
   width: 100%;
-  min-height: 9em;
+  /* About 9 lines; app.js grows it to fit its text. */
+  min-height: calc(9 * 1.45em + 22px);
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--soft);
   color: var(--fg);
   /* 16px or more stops iOS zooming in on focus. */
-  font: 16px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
-  resize: vertical;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+  resize: none;
+  overflow: hidden;
+}
+
+.preview {
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-y: auto;
+}
+
+.preview li.task > input,
+.preview li.task > p > input {
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .box-links {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  padding: 6px 2px 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 0 0;
   font-size: 14px;
 }
 
 .box-links a {
   overflow-wrap: anywhere;
+  padding: 3px 8px;
+  margin-left: -6px;
+  border-radius: 999px;
+}
+
+/* Focus mode: the focused box fills the visible screen above the keyboard; app.js sets the
+   top and height from visualViewport. */
+body.focus .bar,
+body.focus .box:not(.focused),
+body.focus .hint,
+body.focus .box-links,
+body.focus #now-status {
+  display: none !important;
+}
+
+body.focus #now {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) max(var(--pad), env(safe-area-inset-right)) 8px
+    max(var(--pad), env(safe-area-inset-left));
+  background: var(--bg);
+}
+
+body.focus .box.focused {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+body.focus .box.focused .box-tools {
+  display: flex;
+}
+
+body.focus .box.focused label {
+  margin-top: 6px;
+}
+
+body.focus .box.focused textarea,
+body.focus .box.focused .preview {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+}
+
+body.focus .box.focused textarea {
+  overflow-y: auto;
+}
+
+body.focus .actions {
+  margin-top: 8px;
 }
 
 .box-links a::before {

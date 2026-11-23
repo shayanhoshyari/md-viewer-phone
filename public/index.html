@@ -23,7 +23,12 @@
         <a id="tab-life" href="#life/todo.md">Life</a>
         <a id="tab-repo" href="#repo">Repo</a>
       </nav>
-      <button id="sign-out" class="link" type="button" hidden>Sign out</button>
+      <div class="bar-tools">
+        <button id="nav-back" class="link icon" type="button" aria-label="Back">‹</button>
+        <button id="nav-forward" class="link icon" type="button" aria-label="Forward">›</button>
+        <button id="nav-reload" class="link icon" type="button" aria-label="Reload">↻</button>
+        <button id="sign-out" class="link" type="button" hidden>Sign out</button>
+      </div>
     </header>
 
     <section id="sign-in" class="panel" hidden>
@@ -33,18 +38,45 @@
 
     <main>
       <section id="now" hidden>
-        <label for="now-inbox">Todo inbox</label>
-        <p class="hint">To-dos for Claude to file into the list, then clear.</p>
-        <textarea id="now-inbox" rows="8" spellcheck="true" autocapitalize="sentences"></textarea>
-        <nav id="now-inbox-links" class="box-links" hidden></nav>
-        <label for="now-other">Other inbox</label>
-        <p class="hint">Notes for other areas, each under its own <code>### Heading</code>.</p>
-        <textarea id="now-other" rows="8" spellcheck="true" autocapitalize="sentences"></textarea>
-        <nav id="now-other-links" class="box-links" hidden></nav>
-        <label for="now-mind">Mind</label>
-        <p class="hint">Free notes, left alone.</p>
-        <textarea id="now-mind" rows="8" spellcheck="true" autocapitalize="sentences"></textarea>
-        <nav id="now-mind-links" class="box-links" hidden></nav>
+        <div id="now-inbox-box" class="box">
+          <div class="box-head">
+            <label for="now-inbox">Todo inbox</label>
+            <span class="box-tools">
+              <button class="link box-preview" type="button">Preview</button>
+              <button class="link box-done" type="button">Done</button>
+            </span>
+          </div>
+          <p class="hint">To-dos for Claude to file into the list, then clear.</p>
+          <textarea id="now-inbox" rows="9" spellcheck="true" autocapitalize="sentences"></textarea>
+          <div id="now-inbox-preview" class="preview markdown" hidden></div>
+          <nav id="now-inbox-links" class="box-links" hidden></nav>
+        </div>
+        <div id="now-other-box" class="box">
+          <div class="box-head">
+            <label for="now-other">Other inbox</label>
+            <span class="box-tools">
+              <button class="link box-preview" type="button">Preview</button>
+              <button class="link box-done" type="button">Done</button>
+            </span>
+          </div>
+          <p class="hint">Notes for other areas, each under its own <code>### Heading</code>.</p>
+          <textarea id="now-other" rows="9" spellcheck="true" autocapitalize="sentences"></textarea>
+          <div id="now-other-preview" class="preview markdown" hidden></div>
+          <nav id="now-other-links" class="box-links" hidden></nav>
+        </div>
+        <div id="now-mind-box" class="box">
+          <div class="box-head">
+            <label for="now-mind">Mind</label>
+            <span class="box-tools">
+              <button class="link box-preview" type="button">Preview</button>
+              <button class="link box-done" type="button">Done</button>
+            </span>
+          </div>
+          <p class="hint">Free notes, left alone.</p>
+          <textarea id="now-mind" rows="9" spellcheck="true" autocapitalize="sentences"></textarea>
+          <div id="now-mind-preview" class="preview markdown" hidden></div>
+          <nav id="now-mind-links" class="box-links" hidden></nav>
+        </div>
         <div class="actions">
           <button id="now-commit" class="primary" type="button">Commit</button>
           <button id="now-discard" class="primary danger" type="button" hidden>Discard</button>

@@ -121,14 +121,24 @@ Three tabs, routed by the URL hash, so the back button and links work:
 
 - **Now** (`#now`, the default): the `NOW_FILE` as three text boxes, Todo inbox, Other inbox, then
   Mind, each with a one-line hint of what it is for, and Commit. Under
-  each box, a row of tappable links lists the web links in its text, as a textarea can't hold
-  links itself; a link to the page's own address opens in place, so it works as a bookmark.
+  each box, tappable links list the web links in its text, one per line, as a textarea can't
+  hold links itself; a link to the page's own address opens in place, so it works as a
+  bookmark. See [Now's boxes](#nows-boxes).
 - **Life** (`#life/<path>`): the folder holding the `NOW_FILE`, read-only. The tab opens on
   `todo.md` (`#life/todo.md`), and so does tapping it while in it, or on the folder when it has
   no `todo.md`; the first breadcrumb, the folder's name (`#life`), opens the folder.
 - **Repo** (`#repo/<path>`): the whole repo, read-only.
 
 Without a `NOW_FILE`, Now and Life are hidden, and their routes open Repo.
+
+The top bar, always shown, holds the tabs, then **‹ › ↻**: browser history back and forward, and
+a full reload. The reload is safe, as `mine` is already saved, and it is how the home-screen
+app, which has no browser buttons, picks up a new deploy. On screens 420px wide or less the
+tabs' padding shrinks to fit.
+
+Pressed look: link-style buttons and links get an accent-tinted pill while pressed, solid
+buttons darken, and iOS's grey tap flash is off. iOS Safari applies `:active` only once the page
+has a `touchstart` listener, so the page adds an empty one.
 
 ### Now
 
@@ -179,6 +189,29 @@ shows both:
 Writes are rare, so a whole-section conflict is simple enough. Commit is refused while a box
 still contains a marker line. The split, rebuild and merge are pure functions in
 `public/now.js`, tested in `tests/`.
+
+### Now's boxes
+
+- **Font**: the system font, not monospace, which fits about 30% more per line.
+- **Auto-grow**: each box is as tall as its text, at least about 9 lines, so the page scrolls
+  rather than the box. No resize handle.
+- **Focus mode**: focusing a box makes it fill the visible screen above the keyboard, fitted to
+  `visualViewport` and following it as the keyboard comes and goes. The tab bar, the other
+  boxes, the hints, the link rows and the status line hide; Commit, Discard and Not committed
+  stay below the box. The box's heading row gains **Preview** and **Done**. Only Done leaves
+  focus mode: a blur doesn't, so tapping Commit doesn't make the layout jump.
+- **Preview** (focus mode only): renders the box's markdown as the Life tab does, and **Edit**
+  goes back. Only task checkboxes can be changed there: a tap flips that line's `[ ]` ↔ `[x]`
+  in the text, as typing would. Checkboxes are matched to task lines in order (a list item
+  opening with `[ ]`, `[x]` or `[X]`, numbered or not), skipping fenced code. Known limit: a
+  task inside a `>` quote or an HTML comment throws the count off.
+- **Link labels say where**: a link to the page's own address shows its repo path, such as
+  `notes/trips/2026-09.md`: a `#life/…` link shows the full repo path, Life's folder included,
+  and `?a=<id>` adds ` § <id>`; `#now` shows `now`. Any other link shows its host, path and
+  hash, without the query, so a link to the deployed page still shows its path on `localhost`,
+  where it isn't the page's own address.
+
+The task toggle and the labels are pure functions in `public/now.js`, tested in `tests/`.
 
 ### Life and Repo
 

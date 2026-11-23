@@ -18,7 +18,17 @@ import {
   signOut,
 } from "./github.js";
 import { render } from "./markdown.js";
-import { empty, hasMarkers, links, merge, rebuild, SECTIONS, same, split } from "./now.js";
+import {
+  empty,
+  hasMarkers,
+  links,
+  merge,
+  rebuild,
+  SECTIONS,
+  same,
+  split,
+  toggleTask,
+} from "./now.js";
 import { HOME, hashFor, hasNow, lifeFolder, listed, parse, tabs } from "./routes.js";
 
 /** @typedef {import("./routes.js").Route} Route */
@@ -126,7 +136,7 @@ function boxes() {
 function showLinks(box) {
   const row = $(`${box.id}-links`);
   row.replaceChildren(
-    ...links(box.value, location.origin).map(({ href, label, inside }) => {
+    ...links(box.value, location.origin, config.folder).map(({ href, label, inside }) => {
       const link = document.createElement("a");
       link.href = href;
       link.textContent = label;
@@ -156,6 +166,23 @@ function showDirty() {
 }
 
 /**
+ * Make a box as tall as its text, so the page scrolls rather than the box. In focus mode the
+ * stylesheet sizes it instead.
+ * @param {HTMLTextAreaElement} box
+ */
+function grow(box) {
+  if (focused || box.offsetParent === null) return;
+  const y = window.scrollY;
+  box.style.height = "auto";
+  box.style.height = `${box.scrollHeight + 2}px`;
+  window.scrollTo(window.scrollX, y);
+}
+
+function growAll() {
+  for (const [, box] of sectionBoxes) grow(box);
+}
+
+/**
  * Fill the boxes, a missing section as empty (a `mine` saved before it existed).
  * @param {Partial<Sections>} sections
  */
@@ -163,6 +190,8 @@ function fillBoxes(sections) {
   for (const [key, box] of sectionBoxes) {
     box.value = sections[key] ?? "";
     showLinks(box);
+    grow(box);
+    refreshPreview(box);
   }
 }
 
@@ -173,12 +202,128 @@ function setBoxes(sections) {
   showDirty();
 }
 
+/**
+ * After a box's text changed, by typing or a tap in Preview.
+ * @param {HTMLTextAreaElement} box
+ */
+function edited(box) {
+  save("mine", boxes());
+  showLinks(box);
+  grow(box);
+  showDirty();
+}
+
 for (const [, box] of sectionBoxes) {
-  box.addEventListener("input", () => {
-    save("mine", boxes());
-    showLinks(box);
-    showDirty();
+  box.addEventListener("input", () => edited(box));
+  box.addEventListener("focus", () => enterFocus(box));
+}
+
+window.addEventListener("resize", growAll);
+
+// ---- Focus mode and Preview ----
+
+/**
+ * The box in focus mode, filling the visible screen; null when none is.
+ * @type {HTMLTextAreaElement | null}
+ */
+let focused = null;
+
+/** @param {HTMLTextAreaElement} box */
+function wrapOf(box) {
+  return $(`${box.id}-box`);
+}
+
+/** Fit Now to the visible screen, above the keyboard. */
+function fitToScreen() {
+  if (!focused) return;
+  const view = window.visualViewport;
+  const now = $("now");
+  now.style.top = `${view ? view.offsetTop : 0}px`;
+  now.style.height = `${view ? view.height : window.innerHeight}px`;
+}
+
+window.visualViewport?.addEventListener("resize", fitToScreen);
+window.visualViewport?.addEventListener("scroll", fitToScreen);
+
+/** @param {HTMLTextAreaElement} box */
+function enterFocus(box) {
+  if (focused === box) return;
+  if (focused) leaveFocus();
+  focused = box;
+  wrapOf(box).classList.add("focused");
+  document.body.classList.add("focus");
+  fitToScreen();
+}
+
+/** Leave focus mode: only Done does, or leaving the Now tab; a blur doesn't. */
+function leaveFocus() {
+  const box = focused;
+  if (!box) return;
+  showPreview(box, false);
+  focused = null;
+  wrapOf(box).classList.remove("focused");
+  document.body.classList.remove("focus");
+  const now = $("now");
+  now.style.top = "";
+  now.style.height = "";
+  box.blur();
+  growAll();
+  if (!$("now").hidden) wrapOf(box).scrollIntoView({ block: "start" });
+}
+
+/** @param {HTMLTextAreaElement} box */
+function previewOf(box) {
+  return $(`${box.id}-preview`);
+}
+
+/**
+ * Show a box's markdown rendered, or its text again. Only the task checkboxes can be changed
+ * in the preview: a tap flips that task in the text.
+ * @param {HTMLTextAreaElement} box
+ * @param {boolean} on
+ */
+function showPreview(box, on) {
+  const preview = previewOf(box);
+  preview.hidden = !on;
+  box.hidden = on;
+  const button = wrapOf(box).querySelector(".box-preview");
+  if (button) button.textContent = on ? "Edit" : "Preview";
+  if (on) {
+    box.blur();
+    refreshPreview(box);
+  } else preview.replaceChildren();
+}
+
+/**
+ * Render a box's preview, if shown.
+ * @param {HTMLTextAreaElement} box
+ */
+function refreshPreview(box) {
+  const preview = previewOf(box);
+  if (preview.hidden) return;
+  // Safe: render sanitizes its output with DOMPurify (DESIGN.md → Security).
+  preview.innerHTML = render(box.value, config.nowFile, "life");
+  preview.querySelectorAll('input[type="checkbox"]').forEach((input, i) => {
+    /** @type {HTMLInputElement} */ (input).disabled = false;
+    input.addEventListener("change", () => {
+      box.value = toggleTask(box.value, i);
+      edited(box);
+      refreshPreview(box);
+    });
   });
+  loadImages(preview);
+}
+
+for (const [, box] of sectionBoxes) {
+  const wrap = wrapOf(box);
+  wrap.querySelector(".box-preview")?.addEventListener("click", () => {
+    if (previewOf(box).hidden) showPreview(box, true);
+    else {
+      showPreview(box, false);
+      box.focus();
+    }
+  });
+  wrap.querySelector(".box-done")?.addEventListener("click", leaveFocus);
 }
 
 // Discard takes two taps: the first arms it for a few seconds, the second resets the boxes.
@@ -369,9 +514,12 @@ async function imageUrl(path, type) {
   return blobUrl(new Blob([bytes], { type }));
 }
 
-/** Fetch and show the repo images in rendered markdown. */
-function loadImages() {
-  for (const img of content.querySelectorAll("img[data-repo-src]")) {
+/**
+ * Fetch and show the repo images in rendered markdown.
+ * @param {HTMLElement} root
+ */
+function loadImages(root) {
+  for (const img of root.querySelectorAll("img[data-repo-src]")) {
     const path = img.getAttribute("data-repo-src") ?? "";
     const type = IMAGE_TYPES[extension(path)];
     if (!type) continue;
@@ -558,7 +706,7 @@ async function showView(route) {
     content.replaceChildren(...parts);
     shown = key;
     status("view-status", "");
-    loadImages();
+    loadImages(content);
     sortableTables();
     scrollTo(route.anchor);
   } catch (error) {
@@ -583,12 +731,23 @@ function route() {
     link.classList.toggle("active", tab === current.tab);
     link.href = tab === current.tab ? HOME[tab] : lastHash[tab];
   }
+  if (current.tab !== "now") leaveFocus();
   $("now").hidden = current.tab !== "now";
   $("view").hidden = current.tab === "now";
-  if (current.tab !== "now") showView(current);
+  if (current.tab === "now") growAll();
+  else showView(current);
 }
 
 window.addEventListener("hashchange", route);
+
+// The top bar's ‹ › ↻, as the home-screen app has no browser buttons. Reloading is safe: the
+// boxes are already saved as `mine`.
+$("nav-back").addEventListener("click", () => history.back());
+$("nav-forward").addEventListener("click", () => history.forward());
+$("nav-reload").addEventListener("click", () => location.reload());
+
+// iOS Safari applies :active (the pressed look) only once the page has a touchstart listener.
+document.addEventListener("touchstart", () => {}, { passive: true });
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !signedIn()) return;

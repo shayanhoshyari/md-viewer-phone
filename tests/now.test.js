@@ -10,6 +10,7 @@ import {
   rebuild,
   same,
   split,
+  toggleTask,
 } from "../public/now.js";
 
 const sample = readFileSync(new URL("./now.md", import.meta.url), "utf8");
@@ -195,7 +196,7 @@ describe("links", () => {
     expect(links(text, ORIGIN)).toEqual([
       {
         href: "#repo/notes/trips/2026-09",
-        label: "repo/notes/trips/2026-09",
+        label: "notes/trips/2026-09",
         inside: true,
       },
       { href: "https://example.com/a?b=1", label: "example.com/a", inside: false },
@@ -206,5 +207,73 @@ describe("links", () => {
 
   it("is empty without links", () => {
     expect(links("[ ] water the plants", ORIGIN)).toEqual([]);
+  });
+});
+
+describe("links labels", () => {
+  const ORIGIN = "https://phone.example.workers.dev";
+  const label = (/** @type {string} */ url, folder = "notes") =>
+    links(url, ORIGIN, folder)[0]?.label;
+
+  it("shows an own #repo link's repo path, decoded", () => {
+    expect(label(`${ORIGIN}/#repo/realms/tennis/notes.md`)).toBe("realms/tennis/notes.md");
+    expect(label(`${ORIGIN}/#repo/a%20b/c.md`)).toBe("a b/c.md");
+    expect(label(`${ORIGIN}/#repo`)).toBe("repo");
+  });
+
+  it("shows an own #life link's full repo path, folder included", () => {
+    expect(label(`${ORIGIN}/#life/todo.md`)).toBe("notes/todo.md");
+    expect(label(`${ORIGIN}/#life/todo.md`, "")).toBe("todo.md");
+    expect(label(`${ORIGIN}/#life`)).toBe("notes");
+    expect(label(`${ORIGIN}/#now`)).toBe("now");
+  });
+
+  it("adds § and the heading for ?a=", () => {
+    expect(label(`${ORIGIN}/#life/todo.md?a=notes`)).toBe("notes/todo.md § notes");
+    expect(label(`${ORIGIN}/#repo/x/y.md?a=two-words`)).toBe("x/y.md § two-words");
+  });
+
+  it("shows host, path and hash for other links, without the query", () => {
+    expect(label("https://example.com/")).toBe("example.com");
+    expect(label("https://example.com/a/b?c=1#top")).toBe("example.com/a/b#top");
+  });
+
+  it("shows the path of a link to the page from elsewhere, such as localhost", () => {
+    const other = "http://localhost:8787";
+    expect(links(`${ORIGIN}/#repo/notes/trips/2026-09.md`, other, "notes")).toEqual([
+      {
+        href: `${ORIGIN}/#repo/notes/trips/2026-09.md`,
+        label: "phone.example.workers.dev/#repo/notes/trips/2026-09.md",
+        inside: false,
+      },
+    ]);
+  });
+});
+
+describe("toggleTask", () => {
+  it("flips the nth task, in order", () => {
+    const text = "- [ ] one\n- [x] two\n- [ ] three";
+    expect(toggleTask(text, 0)).toBe("- [x] one\n- [x] two\n- [ ] three");
+    expect(toggleTask(text, 1)).toBe("- [ ] one\n- [ ] two\n- [ ] three");
+    expect(toggleTask(text, 2)).toBe("- [ ] one\n- [x] two\n- [x] three");
+  });
+
+  it("unticks [X] too, and leaves the text alone out of range", () => {
+    expect(toggleTask("* [X] done", 0)).toBe("* [ ] done");
+    expect(toggleTask("- [ ] one", 1)).toBe("- [ ] one");
+    expect(toggleTask("no tasks", 0)).toBe("no tasks");
+  });
+
+  it("counts numbered and nested items, not plain text or empty boxes", () => {
+    const text = "1. [ ] a\n2) [x] b\n  - [ ] c\n[ ] not a list item\n- [ ]\n- [x]   \n+ [ ] d";
+    expect(toggleTask(text, 0)).toBe(text.replace("1. [ ]", "1. [x]"));
+    expect(toggleTask(text, 1)).toBe(text.replace("2) [x]", "2) [ ]"));
+    expect(toggleTask(text, 2)).toBe(text.replace("  - [ ] c", "  - [x] c"));
+    expect(toggleTask(text, 3)).toBe(text.replace("+ [ ] d", "+ [x] d"));
+  });
+
+  it("skips tasks inside fenced code", () => {
+    const text = "```\n- [ ] code\n```\n~~~~\n- [ ] tilde\n```\n~~~~\n- [ ] real";
+    expect(toggleTask(text, 0)).toBe(text.replace("- [ ] real", "- [x] real"));
   });
 });

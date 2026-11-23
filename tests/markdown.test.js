@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import markdownit from "markdown-it";
 import { beforeAll, describe, expect, it } from "vitest";
 import { configure } from "../public/config.js";
+import { toggleTask } from "../public/now.js";
 
 /** @type {typeof import("../public/markdown.js")} */
 let markdown;
@@ -167,5 +168,30 @@ describe("render", () => {
     expect(html).toContain('data-repo-src="notes/home/plans/cat.png"');
     expect(html).toContain('src=""');
     expect(html).toContain('alt="a cat"');
+  });
+});
+
+describe("preview task toggle", () => {
+  it("matches the rendered checkboxes to toggleTask's count, in order", () => {
+    let text = [
+      "- [ ] one",
+      "**bold** - [ ] not a task",
+      "```",
+      "- [ ] code",
+      "```",
+      "1. [x] two **bold**",
+      "   - [ ] three",
+      "- [ ]",
+    ].join("\n");
+    const checks = () => {
+      const div = document.createElement("div");
+      div.innerHTML = markdown.render(text, "notes/home/now.md", "life");
+      return [...div.querySelectorAll("input")].map((i) => i.hasAttribute("checked"));
+    };
+    expect(checks()).toEqual([false, true, false]);
+    for (const n of [0, 1, 2]) {
+      text = toggleTask(text, n);
+    }
+    expect(checks()).toEqual([true, false, true]);
   });
 });
