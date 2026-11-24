@@ -1,4 +1,4 @@
-# The Cloudflare Worker: fill in name and [vars] (DESIGN.md, Setup).
+# The Cloudflare Worker: fill in name and [vars] (SETUP.md).
 name = "md-viewer-phone"
 main = "worker/index.js"
 compatibility_date = "2026-11-01"
@@ -15,10 +15,10 @@ directory = "./public"
 [vars]
 # The repo to read, owner/name; branch main.
 REPO = ""
-# The GitHub App's client ID (DESIGN.md, Setup → Steps 2).
+# The GitHub App's client ID (SETUP.md, Steps 2).
 GITHUB_CLIENT_ID = ""
 # The notes file the Now tab edits; its folder is the Life tab. Leave empty for Repo only.
 NOW_FILE = ""
 
-# The client secret is a Wrangler secret (DESIGN.md, Setup → Secrets):
+# The client secret is a Wrangler secret (SETUP.md, Secrets):
 # GITHUB_CLIENT_SECRET = <DO NOT PUT HERE; set with `wrangler secret put GITHUB_CLIENT_SECRET`>

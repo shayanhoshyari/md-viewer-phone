@@ -1,5 +1,5 @@
 public/vendor/
 node_modules/
 .wrangler/
-# Local secrets for wrangler dev (DESIGN.md, Secrets); never commit.
+# Local secrets for wrangler dev (SETUP.md, Secrets); never commit.
 .dev.vars

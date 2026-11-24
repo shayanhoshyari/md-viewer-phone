@@ -53,17 +53,11 @@ free notes
 
 ## Setup
 
-Needs a Cloudflare account, a GitHub account and [mise](https://mise.jdx.dev), which brings Node.
-
-1. In `wrangler.toml`, set the Worker's `name` and, under `[vars]`, `REPO` (`owner/name`) and `NOW_FILE` (such as `notes/now.md`). With no `NOW_FILE`, only the Repo tab shows.
-2. Create your own GitHub App from `github-app.json`, with your Worker's URL in it, and install it on the repo. Put its client ID in `wrangler.toml` as `GITHUB_CLIENT_ID`.
-3. Generate a client secret in the App and store it with `mise exec -- npx wrangler secret put GITHUB_CLIENT_SECRET`.
-4. `make dev`, then `make deploy`. Open the Worker's URL in Safari and add it to the Home Screen, [as above](#on-the-home-screen).
-
-The full steps, local dev with `make serve`, and revoking a lost phone are in [DESIGN.md](DESIGN.md#setup).
+Needs a Cloudflare account (free plan, no card), a GitHub account and [mise](https://mise.jdx.dev), which brings Node. You create your own GitHub App and Worker, point them at your repo in `wrangler.toml`, and run `make deploy`: [SETUP.md](SETUP.md) has the steps, local dev with `make serve`, and revoking a lost phone.
 
 ## More
 
-- [DESIGN.md](DESIGN.md): the full spec: settings, sign-in, sync and merge, security, setup.
+- [DESIGN.md](DESIGN.md): the full spec: settings, sign-in, sync and merge, security.
+- [SETUP.md](SETUP.md): the setup steps, local dev, and revoking a lost phone.
 - [CHANGELOG.md](CHANGELOG.md): releases.
 - [AGENTS.md](AGENTS.md): development notes (`make dev lint test`).

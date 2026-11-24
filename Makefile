@@ -30,7 +30,7 @@ format: _check_mise
 test: _check_mise
 	$(RUN) npx vitest run --passWithNoTests
 
-# The page and /api/token at http://localhost:8787, secret from .dev.vars (DESIGN.md, Local dev).
+# The page and /api/token at http://localhost:8787, secret from .dev.vars (SETUP.md, Local dev).
 serve: _check_mise vendor assets
 	$(RUN) npx wrangler dev --port 8787
 
