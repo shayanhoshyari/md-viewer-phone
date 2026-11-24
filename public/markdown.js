@@ -2,6 +2,7 @@
 // HTML on, and its output sanitized by DOMPurify (the vendored global `DOMPurify`). See
 // DESIGN.md → Life and Repo.
 
+import { mermaidUrl } from "./diagrams.js";
 import { hashFor, resolve, slug } from "./routes.js";
 
 /** @typedef {import("./routes.js").Tab} Tab */
@@ -156,6 +157,29 @@ md.renderer.rules.image = (tokens, i, options, env, self) => {
   return self.renderToken(tokens, i, options);
 };
 
+// Diagram fences: an image from a public service, then the source, collapsed. Mermaid's URL
+// is written here; PlantUML's needs deflating, so the page fills it in (DESIGN.md → Life and
+// Repo).
+/** @type {Record<string, string>} */
+const DIAGRAMS = { mermaid: "mermaid", plantuml: "plantuml", puml: "plantuml" };
+const defaultFence = md.renderer.rules.fence;
+md.renderer.rules.fence = (tokens, i, options, env, self) => {
+  const token = tokens[i];
+  const word = token.info.trim().split(/\s+/)[0].toLowerCase();
+  const kind = Object.hasOwn(DIAGRAMS, word) ? DIAGRAMS[word] : "";
+  if (!kind) {
+    return defaultFence ? defaultFence(tokens, i, options, env, self) : "";
+  }
+  const esc = md.utils.escapeHtml;
+  const src = kind === "mermaid" ? ` src="${esc(mermaidUrl(token.content))}"` : "";
+  const alt = kind === "mermaid" ? "Mermaid diagram" : "PlantUML diagram";
+  return (
+    `<div class="diagram"><img alt="${alt}" data-diagram="${kind}"${src}>` +
+    `<details><summary>Diagram source</summary><pre><code>${esc(token.content)}</code></pre>` +
+    "</details></div>\n"
+  );
+};
+
 md.renderer.rules.table_open = () => '<div class="table-wrap"><table>\n';
 md.renderer.rules.table_close = () => "</table></div>\n";
 
@@ -169,7 +193,7 @@ const PURIFY = {
   ],
   ALLOWED_ATTR: [
     ...["href", "title", "alt", "src", "id", "class", "target", "rel", "start", "open"],
-    ...["type", "checked", "disabled"],
+    ...["type", "checked", "disabled", "width", "height"],
   ],
   // Ids get GitHub's `user-content-` prefix, so a heading can't shadow a page global.
   SANITIZE_NAMED_PROPS: true,

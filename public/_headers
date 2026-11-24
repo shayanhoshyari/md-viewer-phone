@@ -1,5 +1,5 @@
 # Sent with every static file. See DESIGN.md → Security.
 /*
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' blob: data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' blob: data: https:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff

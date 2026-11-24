@@ -340,6 +340,37 @@ body.focus .actions {
 
 .content img {
   max-width: 100%;
+  height: auto;
+}
+
+/* A sized image in a table keeps its width: the table scrolls sideways. */
+.content td img[width],
+.content th img[width] {
+  max-width: none;
+}
+
+/* Diagram images on a white card, so dark mode doesn't hide their black lines. */
+.markdown .diagram {
+  margin: 12px 0;
+}
+
+.markdown .diagram > img {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  height: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+/* Mermaid's SVG has no size of its own: without one it would fall back to 300px. */
+.markdown .diagram > img[data-diagram="mermaid"] {
+  width: 100%;
+}
+
+.markdown .diagram > img.broken {
+  background: none;
 }
 
 .content img.broken {

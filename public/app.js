@@ -2,6 +2,7 @@
 // See DESIGN.md → The page.
 
 import { config, loadConfig } from "./config.js";
+import { plantumlUrl } from "./diagrams.js";
 import {
   BRANCH,
   contentsPath,
@@ -526,6 +527,36 @@ function loadImages(root) {
     imageUrl(path, type).then(
       (url) => img.setAttribute("src", url),
       () => img.classList.add("broken"),
+    );
+  }
+  loadDiagrams(root);
+}
+
+/**
+ * A diagram that can't be shown: outline it and open its source.
+ * @param {Element} img
+ */
+function diagramFailed(img) {
+  img.classList.add("broken");
+  const details = img.parentElement?.querySelector("details");
+  if (details) details.open = true;
+}
+
+/**
+ * Watch the diagram images in rendered markdown for failures, and fill in PlantUML's, whose
+ * URL needs the text deflated. The node may be gone by then (Now's preview re-renders).
+ * @param {HTMLElement} root
+ */
+function loadDiagrams(root) {
+  for (const img of root.querySelectorAll(".diagram > img")) {
+    img.addEventListener("error", () => diagramFailed(img));
+    if (img.getAttribute("data-diagram") !== "plantuml") continue;
+    const text = img.parentElement?.querySelector("code")?.textContent ?? "";
+    plantumlUrl(text).then(
+      (url) => {
+        if (img.isConnected) img.setAttribute("src", url);
+      },
+      () => diagramFailed(img),
     );
   }
 }

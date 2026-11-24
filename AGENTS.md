@@ -3,6 +3,8 @@
 The phone page for one notes file, `now.md`, and reading a private GitHub repo: plain HTML and
 JS served by a Cloudflare Worker that also does the GitHub sign-in.
 
+- `docs/web-security.md`: a general knowledge doc on XSS, sanitizers and CSP, not tied to this
+  page. Not a spec, and not updated with it.
 - `DESIGN.md` is the source of truth: change it first, then the code. A deployment's record of
   what exists in Cloudflare and GitHub, if kept, is `DEPLOYMENT.md`; update it with every
   change there.

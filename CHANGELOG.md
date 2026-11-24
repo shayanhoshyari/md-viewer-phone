@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 - 2026-11-23
+
+- Life and Repo: images from other sites load, at the `width` and `height` the file gives; in a
+  table they keep that width, and the table scrolls sideways.
+- Life, Repo and Now's preview: `mermaid`, `plantuml` and `puml` fences show as diagrams, drawn
+  by mermaid.ink and the PlantUML server, with the source collapsed under **Diagram source**.
+  Both services see the diagram's text. A diagram that won't load opens its source.
+
 ## 0.9.0 - 2026-11-23
 
 - Now: each box grows to fit its text, in the system font rather than monospace. Focusing a

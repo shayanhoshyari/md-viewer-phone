@@ -68,13 +68,14 @@ phone --> api : read files, commit now.md\n(with the user's token)
   - `app.js`: tabs, Now's sync and Commit, the Life and Repo views.
   - `github.js`: sign-in, renewal and GitHub calls. `now.js`: Now's split, rebuild and merge.
     `routes.js`: the hash routes and link resolving. `markdown.js`: markdown-it set up for the
-    page. `config.js`: the settings, read from `/config.json`.
+    page. `diagrams.js`: the Mermaid and PlantUML image URLs. `config.js`: the settings, read
+    from `/config.json`.
   - `_headers`: the security headers, and `vendor/` (library files copied from `node_modules`
     by `make vendor`, run by `make dev` and `make deploy`, gitignored): markdown-it and
     DOMPurify, loaded as plain scripts that set the globals `markdownit` and `DOMPurify`.
 - `types/`: type declarations for the checker, such as the `markdownit` and `DOMPurify` globals.
 - `tests/`: Vitest tests, offline: Now (with a sample `tests/now.md`), settings, routes,
-  markdown and the Worker, with `fetch` stubbed. The markdown tests run under jsdom, since
+  markdown, diagrams and the Worker, with `fetch` stubbed. The markdown tests run under jsdom, since
   DOMPurify needs a DOM.
 
 ## Sign-in
@@ -232,13 +233,34 @@ The task toggle and the labels are pure functions in `public/now.js`, tested in 
   `<!-- section-numbers: false -->` is not read); ids come from the text without the number.
   With two or more H2/H3 headings, a **Contents** list of them, numbered, links to each and goes
   after the H1 (or at the top without one); unlike md-viewer it starts collapsed. A
-  file inside Life's folder stays in the Life tab; anything else opens in Repo. Mermaid and math stay as code blocks. Other files show as plain text.
+  file inside Life's folder stays in the Life tab; anything else opens in Repo. Math stays as
+  code blocks. Other files show as plain text.
+- Images from other hosts load straight from them, at the `width` and `height` the file gives
+  (`style` is stripped, so `min-width` and the like are dropped). An image with a `width` in a
+  table cell isn't shrunk to the screen, since the table scrolls sideways, and a shrunk image
+  keeps its shape. Known limit: raw HTML `<img src="relative/path.png">` stays broken; only
+  markdown-syntax images are fetched from the repo.
+- `mermaid`, `plantuml` and `puml` fences show as images drawn by public services, as md-viewer
+  does for PlantUML; the page holds no diagram library and inserts no SVG markup. Each becomes a
+  `div.diagram`: the `<img>` on a white card (so dark mode doesn't hide black lines), then the
+  source in a collapsed **Diagram source**. Mermaid goes to
+  `https://mermaid.ink/svg/<base64url of the UTF-8 text, no padding>`, written by the renderer.
+  PlantUML goes to `https://www.plantuml.com/plantuml/svg/<text>`, the text deflated with
+  `CompressionStream("deflate-raw")` and written in PlantUML's own base64 alphabet; the renderer
+  leaves its `<img>` without a `src` and `data-diagram="plantuml"`, and the page fills it after
+  the HTML goes in, reading the source from the `code` beside it, and only ever with that host.
+  Both services see the diagram text (md-viewer draws Mermaid locally, so Mermaid text leaving
+  the machine is new). If an image fails to load, or the browser lacks `deflate-raw` (iOS Safari
+  before 16.4), it gets the `broken` outline and its source opens. A PlantUML syntax error comes
+  back as a picture of the error. The URL builders are pure functions in `public/diagrams.js`.
 - A folder shows its `README.md`, if any, above its listing; `AGENTS.md` is never shown in its
   place.
 - The Life listing hides code and agent files: names starting with `_` or `.`, and `AGENTS.md`
   and `CLAUDE.md`. They stay reachable from Repo, which lists everything.
 
 ## Security
+
+How these layers work, and why: [docs/web-security.md](docs/web-security.md).
 
 - **Token**: a GitHub App user token with contents read and write, on the repos the App is
   installed on (install it on the one repo) that the user can already reach. It and its refresh token live
@@ -248,15 +270,20 @@ The task toggle and the labels are pure functions in `public/now.js`, tested in 
 - **No foreign script**: markdown's HTML output, raw HTML from the repo included, goes through
   DOMPurify with an allowlist: the tags markdown-it makes, plus `details`, `summary`, `br`,
   `kbd`, `sub` and `sup`; attributes `href`, `src`, `alt`, `title`, `id`, `class`, `target`,
-  `rel`, `start`, `open` and `data-*`, and on `input` only `type`, `checked`, `disabled`. Any
+  `rel`, `start`, `open`, `width`, `height` and `data-*`, and on `input` only `type`, `checked`, `disabled`. Any
   `input` is forced to a disabled checkbox. No `style`, no event handlers, no `iframe`, `form`
   or `script`. Ids get the `user-content-` prefix, so a heading can't shadow a page global. As a
   second layer, `public/_headers` sends a Content Security Policy on every file, which blocks
   inline script even if the sanitizer misses something:
-  `default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' blob: data:;
-  style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none';
-  frame-ancestors 'none'`, plus `Referrer-Policy: no-referrer`. Every script, the libraries
-  included, is served from the Worker.
+  `default-src 'self'; connect-src 'self' https://api.github.com;
+  img-src 'self' blob: data: https:; style-src 'self'; script-src 'self'; base-uri 'none';
+  form-action 'none'; frame-ancestors 'none'`, plus `Referrer-Policy: no-referrer`. Every
+  script, the libraries included, is served from the Worker.
+- **Outside images**: `img-src` allows any `https:` host, for images from other sites and the
+  diagram services. An `<img>` can't run code or reach the page, so a host can at most show a
+  wrong picture and see that someone asked, without the page's address (`no-referrer`). The
+  cost: any file in the repo can make the phone fetch from any https host when viewed, a
+  tracking pixel. No proxy sits in between.
 - **Worker**: holds the client secret; `/config.json` returns only the three settings;
   `/api/token` accepts only `POST` with a JSON `code` and
   `code_verifier`, or a JSON `refresh_token`, from no `Origin` or its own, and returns only the

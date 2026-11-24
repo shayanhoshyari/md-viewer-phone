@@ -169,6 +169,54 @@ describe("render", () => {
     expect(html).toContain('src=""');
     expect(html).toContain('alt="a cat"');
   });
+
+  it("keeps an image's width and height, and drops its style", () => {
+    const html = markdown.render(
+      '| a |\n| - |\n| <img src="https://example.com/a.jpg" width="240" height="120" style="min-width:240px"> |\n',
+      FILE,
+      "life",
+    );
+    expect(html).toContain('src="https://example.com/a.jpg"');
+    expect(html).toContain('width="240"');
+    expect(html).toContain('height="120"');
+    expect(html).not.toContain("style");
+  });
+
+  it("turns a mermaid fence into its image and collapsed source", () => {
+    const html = markdown.render("```mermaid\ngraph TD\n  A --> B\n```\n", FILE, "life");
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    const img = div.querySelector(".diagram > img");
+    expect(img?.getAttribute("src")).toBe(
+      `https://mermaid.ink/svg/${Buffer.from("graph TD\n  A --> B\n").toString("base64url")}`,
+    );
+    expect(img?.getAttribute("data-diagram")).toBe("mermaid");
+    const details = div.querySelector(".diagram > details");
+    expect(details?.hasAttribute("open")).toBe(false);
+    expect(details?.querySelector("summary")?.textContent).toBe("Diagram source");
+    expect(details?.querySelector("pre > code")?.textContent).toBe("graph TD\n  A --> B\n");
+  });
+
+  it("leaves a plantuml or puml fence's image for the page to fill, in lists, ~~~ and with more info words", () => {
+    const source =
+      "- item\n\n  ~~~plantuml extra words\n  A -> B : <b>\n  ~~~\n\n```PUML\nC -> D\n```\n";
+    const div = document.createElement("div");
+    div.innerHTML = markdown.render(source, FILE, "life");
+    const imgs = div.querySelectorAll(".diagram > img");
+    expect(imgs).toHaveLength(2);
+    for (const img of imgs) {
+      expect(img.getAttribute("data-diagram")).toBe("plantuml");
+      expect(img.hasAttribute("src")).toBe(false);
+    }
+    expect(div.querySelector("li .diagram code")?.textContent).toBe("A -> B : <b>\n");
+    expect(div.querySelector("b")).toBeNull();
+  });
+
+  it("leaves other fences as code", () => {
+    const html = markdown.render("```js\nlet a;\n```\n", FILE, "life");
+    expect(html).not.toContain("diagram");
+    expect(html).toContain("<pre><code");
+  });
 });
 
 describe("preview task toggle", () => {
