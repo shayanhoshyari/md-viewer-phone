@@ -1,5 +1,4 @@
-// The page's settings: wrangler.toml's [vars], served by the Worker as /config.json.
-// See DESIGN.md → Settings.
+// The page's settings: public/config.json, a static file. See DESIGN.md → Settings.
 
 /**
  * @typedef {{
@@ -24,7 +23,7 @@ function text(value) {
 }
 
 /**
- * The settings in a /config.json reply. Throws, naming what to set, when a required one is
+ * The settings in /config.json. Throws, naming what to set, when a required one is
  * missing or malformed.
  * @param {unknown} raw
  * @returns {Config}
@@ -40,7 +39,7 @@ export function parseConfig(raw) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) problems.push("REPO (owner/name)");
   if (!clientId) problems.push("GITHUB_CLIENT_ID (your GitHub App's client ID)");
   if (problems.length) {
-    throw new Error(`Set ${problems.join(" and ")} in wrangler.toml's [vars], then deploy.`);
+    throw new Error(`Set ${problems.join(" and ")} in public/config.json, then deploy.`);
   }
   const [owner, name] = repo.split("/");
   const slash = nowFile.lastIndexOf("/");
@@ -55,16 +54,16 @@ export function parseConfig(raw) {
 
 /**
  * Use these settings from now on.
- * @param {unknown} raw a /config.json reply
+ * @param {unknown} raw the parsed /config.json
  */
 export function configure(raw) {
   Object.assign(config, parseConfig(raw));
   return config;
 }
 
-/** Fetch /config.json from the Worker and use it. */
+/** Fetch /config.json and use it. */
 export async function loadConfig() {
   const reply = await fetch("/config.json", { cache: "no-store" });
-  if (!reply.ok) throw new Error(`Couldn't read the settings: the Worker said ${reply.status}.`);
+  if (!reply.ok) throw new Error(`Couldn't read the settings: /config.json gave ${reply.status}.`);
   return configure(await reply.json());
 }

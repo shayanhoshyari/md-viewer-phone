@@ -26,7 +26,7 @@ describe("parseConfig", () => {
 
   it("names the missing or malformed required settings", () => {
     expect(() => parseConfig({ REPO: "", GITHUB_CLIENT_ID: "" })).toThrow(
-      "Set REPO (owner/name) and GITHUB_CLIENT_ID (your GitHub App's client ID) in wrangler.toml's [vars], then deploy.",
+      "Set REPO (owner/name) and GITHUB_CLIENT_ID (your GitHub App's client ID) in public/config.json, then deploy.",
     );
     expect(() => parseConfig({ REPO: "just-a-name", GITHUB_CLIENT_ID: "id" })).toThrow(
       /^Set REPO \(owner\/name\) in/,

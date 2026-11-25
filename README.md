@@ -53,7 +53,7 @@ free notes
 
 ## Setup
 
-Needs a Cloudflare account (free plan, no card), a GitHub account and [mise](https://mise.jdx.dev), which brings Node. You create your own GitHub App and Worker, point them at your repo in `wrangler.toml`, and run `make deploy`: [SETUP.md](SETUP.md) has the steps, local dev with `make serve`, and revoking a lost phone.
+Needs a Cloudflare account (free plan, no card), a GitHub account and [mise](https://mise.jdx.dev), which brings Node. You create your own GitHub App and Worker, point them at your repo in `public/config.json`, and run `make deploy`: [SETUP.md](SETUP.md) has the steps, local dev with `make serve`, and revoking a lost phone.
 
 ## More
 

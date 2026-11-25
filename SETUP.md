@@ -9,7 +9,7 @@ may keep a record of what it set up, as this one's `DEPLOYMENT.md`.
 |---|---|---|
 | `GITHUB_CLIENT_SECRET` | `wrangler secret put GITHUB_CLIENT_SECRET` | a line in `.dev.vars`, gitignored |
 
-The Worker reads it as `env.GITHUB_CLIENT_SECRET`, like the plain values in `[vars]`. Keep it in
+The Worker reads it as `env.GITHUB_CLIENT_SECRET`. Keep it in
 a password manager: GitHub shows it once. It never goes in the repo. The App's client ID is
 public.
 
@@ -25,10 +25,11 @@ public.
    hour: `gh api -X POST /app-manifests/<code>/conversions --jq '{id, slug, client_id}'`,
    which prints only those and drops the secrets in the response. (Or fill in the same
    settings by hand at Settings → Developer settings → GitHub Apps → New.) Put the client ID
-   in `wrangler.toml` as `GITHUB_CLIENT_ID`. Install the App from
+   in `public/config.json` as `GITHUB_CLIENT_ID`. Install the App from
    `github.com/apps/<name>/installations/new` → Only select repositories → your repo.
-3. **Settings**: `REPO` and, for the Now and Life tabs, `NOW_FILE` in `wrangler.toml`. The
-   file's format is in [DESIGN.md](DESIGN.md#now); it can start empty.
+3. **Settings**: in `public/config.json`, `REPO` (`owner/name`) and, for the Now and Life tabs,
+   `NOW_FILE`, the notes file's repo path ([DESIGN.md](DESIGN.md#settings)). The file's format
+   is in [DESIGN.md](DESIGN.md#now); it can start empty.
 4. **Secret**: in the App's Credentials, generate a new client secret, then, in this folder,
    `mise exec -- npx wrangler secret put GITHUB_CLIENT_SECRET` and paste it. If the Worker
    doesn't exist yet, answer yes to creating it. To replace the secret later, do the same
@@ -57,7 +58,7 @@ code from the working tree.
 | | On localhost |
 |---|---|
 | Secret | from `.dev.vars`, one line `GITHUB_CLIENT_SECRET=...`: the same App and secret as live, so nothing extra to keep in sync. Agents don't read or print it |
-| Settings | from `wrangler.toml`; a line in `.dev.vars` such as `NOW_FILE=` overrides one |
+| Settings | from `public/config.json`; to try others, edit it and don't commit the change |
 | Sign-in | a real login, with the same access as on the phone; its tokens live in the laptop browser's `localStorage` for `localhost:8787` |
 | Commit | writes the real `NOW_FILE` on GitHub |
 

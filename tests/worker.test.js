@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import worker, { grant } from "../worker/index.js";
+import worker from "../worker/index.js";
 
-const env = { GITHUB_CLIENT_ID: "id", GITHUB_CLIENT_SECRET: "secret" };
+vi.mock("../public/config.json", () => ({
+  default: { REPO: "o/r", GITHUB_CLIENT_ID: " id ", NOW_FILE: "" },
+}));
+
+const env = { GITHUB_CLIENT_SECRET: "secret" };
 const URL_ = "https://life.example.dev/api/token";
 
 /**
@@ -18,45 +22,7 @@ function post(body, headers = {}) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("grant", () => {
-  it("accepts a code with its verifier, or a refresh token", () => {
-    expect(grant({ code: "c", code_verifier: "v" })).toEqual({ code: "c", code_verifier: "v" });
-    expect(grant({ refresh_token: "r" })).toEqual({
-      grant_type: "refresh_token",
-      refresh_token: "r",
-    });
-  });
-
-  it("refuses anything else", () => {
-    for (const body of [
-      null,
-      [],
-      "x",
-      {},
-      { code: "c" },
-      { code: "c", code_verifier: "v", client_id: "evil" },
-      { refresh_token: 1 },
-      { refresh_token: "" },
-      { code: "c", code_verifier: "v", refresh_token: "r" },
-    ]) {
-      expect(grant(body)).toBeNull();
-    }
-  });
-});
-
 describe("fetch", () => {
-  it("serves the settings at /config.json, never the secret", async () => {
-    const reply = await worker.fetch(new Request("https://life.example.dev/config.json"), {
-      ...env,
-      REPO: "o/r",
-    });
-    expect(reply.status).toBe(200);
-    expect(reply.headers.get("Cache-Control")).toBe("no-store");
-    expect(await reply.json()).toEqual({ REPO: "o/r", GITHUB_CLIENT_ID: "id", NOW_FILE: "" });
-    const post = new Request("https://life.example.dev/config.json", { method: "POST" });
-    expect((await worker.fetch(post, env)).status).toBe(405);
-  });
-
   it("exchanges with GitHub and returns only the tokens and lifetimes", async () => {
     const github = vi.fn(async () =>
       Response.json({
@@ -71,6 +37,7 @@ describe("fetch", () => {
     vi.stubGlobal("fetch", github);
     const reply = await worker.fetch(post({ code: "c", code_verifier: "v" }), env);
     expect(reply.status).toBe(200);
+    expect(reply.headers.get("Cache-Control")).toBe("no-store");
     expect(await reply.json()).toEqual({
       access_token: "a",
       expires_in: 28800,
@@ -86,27 +53,66 @@ describe("fetch", () => {
     });
   });
 
-  it("passes on GitHub's error name only", async () => {
-    vi.stubGlobal("fetch", async () =>
+  it("sends a refresh as a refresh_token grant, and passes on GitHub's error name only", async () => {
+    const github = vi.fn(async () =>
       Response.json({ error: "bad_refresh_token", error_description: "x" }),
     );
+    vi.stubGlobal("fetch", github);
     const reply = await worker.fetch(post({ refresh_token: "r" }), env);
     expect(reply.status).toBe(400);
     expect(await reply.json()).toEqual({ error: "bad_refresh_token" });
+    const [, init] = /** @type {any} */ (github.mock.calls[0]);
+    expect(Object.fromEntries(init.body)).toEqual({
+      client_id: "id",
+      client_secret: "secret",
+      grant_type: "refresh_token",
+      refresh_token: "r",
+    });
   });
 
-  it("refuses other paths, methods, origins and bodies without calling GitHub", async () => {
+  it("answers a failure with a bare error", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw new Error("network down, SENT");
+    });
+    const reply = await worker.fetch(post({ refresh_token: "r" }), env);
+    expect(reply.status).toBe(500);
+    expect(reply.headers.get("Cache-Control")).toBe("no-store");
+    expect(await reply.json()).toEqual({ error: "internal" });
+  });
+
+  it("refuses other bodies, origins, methods and paths without calling GitHub or echoing", async () => {
     const github = vi.fn();
     vi.stubGlobal("fetch", github);
+    const long = "x".repeat(1000);
     const cases = [
-      [new Request("https://life.example.dev/other"), 404],
-      [new Request(URL_), 405],
-      [post({ refresh_token: "r" }, { Origin: "https://evil.example" }), 403],
-      [post({ nope: 1 }), 400],
-      [new Request(URL_, { method: "POST", body: "{not json" }), 400],
+      post({ code: "c", code_verifier: "v", client_id: "evil" }),
+      post({ code: "c", code_verifier: "v", refresh_token: "r" }),
+      post({ code: "c" }),
+      post({ refresh_token: "" }),
+      post({ refresh_token: 1 }),
+      post({ refresh_token: long }),
+      post({ nope: "SENT" }),
+      post(null),
+      post([]),
+      post("SENT"),
+      post({ refresh_token: "SENT" }, { Origin: "https://evil.example" }),
+      new Request(URL_, { method: "POST", body: "{not json SENT" }),
+      new Request(URL_, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ refresh_token: "SENT" }),
+      }),
+      new Request(URL_),
+      new Request("https://life.example.dev/other", { method: "POST" }),
     ];
-    for (const [request, status] of cases) {
-      expect((await worker.fetch(/** @type {Request} */ (request), env)).status).toBe(status);
+    for (const request of cases) {
+      const reply = await worker.fetch(request, env);
+      expect(reply.ok).toBe(false);
+      expect(reply.status).toBeLessThan(500);
+      const text = await reply.text();
+      expect(text).not.toContain("SENT");
+      expect(text).not.toContain(long);
+      expect(Object.keys(JSON.parse(text))).toEqual(["error"]);
     }
     expect(github).not.toHaveBeenCalled();
   });

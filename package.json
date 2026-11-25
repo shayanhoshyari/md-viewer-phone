@@ -1,6 +1,6 @@
 {
   "name": "md-viewer-phone",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "description": "A phone page for one notes file and reading a private GitHub repo; see DESIGN.md.",
@@ -18,7 +18,11 @@
     "workerd@1.20261113.1": true
   },
   "dependencies": {
+    "@hono/standard-validator": "0.4.1",
+    "@standard-schema/spec": "1.1.0",
     "dompurify": "3.4.17",
-    "markdown-it": "14.3.3"
+    "hono": "4.13.22",
+    "markdown-it": "14.3.3",
+    "valibot": "1.5.0"
   }
 }

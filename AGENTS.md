@@ -13,7 +13,7 @@ the public repo `shayanhoshyari/md-viewer-phone`.
 - `docs/web-security.md`: general knowledge on XSS, sanitizers and CSP. Not a spec, and not
   updated with the page.
 - `wrangler.toml`, `github-app.json`: the Worker and the GitHub App, the source of truth for
-  both.
+  both. `public/config.json`: the page's settings.
 - `template/`: the public repo's versions of the files of the same names.
 - `Makefile`: every command, with comments on what the less obvious ones do.
 - Plans live in the source repo, next to this folder; there is no `plans/` here.

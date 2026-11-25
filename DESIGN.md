@@ -12,15 +12,13 @@ A phone companion to md-viewer: it renders markdown the same way, from GitHub in
 flowchart LR
   phone["iPhone<br>home-screen page"]
   subgraph worker["Cloudflare Worker"]
-    assets["public/<br>static files"]
-    config["GET /config.json"]
+    assets["public/<br>static files,<br>config.json among them"]
     token["POST /api/token"]
   end
   login["github.com"]
   api["api.github.com"]
 
-  phone -- "load the page" --> assets
-  phone -- "read the settings" --> config
+  phone -- "load the page and its settings" --> assets
   phone -- "sign in, renew" --> token
   token -- "code + client secret → tokens" --> login
   phone -- "read files, commit now.md<br>with the user's token" --> api
@@ -29,15 +27,19 @@ flowchart LR
 | Part | Does | Holds |
 |---|---|---|
 | Page (`public/`) | everything the user sees; calls `api.github.com` itself | in `localStorage`: the tokens, the `now.md` boxes, the file list |
-| Worker (`worker/index.js`) | serves the settings, and swaps a sign-in code or refresh token for tokens, the one step that needs the client secret | the client secret; no state, and tokens only while passing them on |
+| Worker (`worker/index.js`) | swaps a sign-in code or refresh token for tokens, the one step that needs the client secret | the client secret; no state, and tokens only while passing them on |
 | GitHub | the repo, and who may read or write it | everything private |
 
-Static files are answered by Cloudflare without running the Worker's code.
+Static files are answered by Cloudflare without running the Worker's code, and so is any path
+that is neither a file nor `/api/token`: `wrangler.toml` sends only `/api/token` to the Worker
+(`run_worker_first`), and the rest get `public/404.html` (`not_found_handling = "404-page"`).
+Only `/api/token` counts toward the free plan's daily Worker requests.
 
 ## Settings
 
-The Worker's `[vars]` in `wrangler.toml`, served to the page as `GET /config.json`. Nothing about
-the repo or the App is in the page's code.
+`public/config.json`, a static file the page fetches at start; the Worker imports the same file
+for the client ID. Nothing about the repo or the App is in the page's code. A change needs a
+deploy.
 
 | Setting | | Meaning | When missing |
 |---|---|---|---|
@@ -247,12 +249,12 @@ How these layers work, and why: [docs/web-security.md](docs/web-security.md).
 
 | Risk | What limits it |
 |---|---|
-| A stranger opens the page | nothing private is in it: everything comes from GitHub, as the signed-in user. `/config.json` is public and not secret |
+| A stranger opens the page | nothing private is in it: everything comes from GitHub, as the signed-in user. `/config.json` is a public static file and not secret |
 | A token leaks | the access token dies within 8 hours. The refresh token is good for 6 months, so a lost phone is [revoked](SETUP.md#revoke-a-lost-phones-login) |
 | The token can do more than the page | it has contents read and write on the repos the App is installed on, so install it on the one repo. That only `now.md` is editable is the page's limit, not the token's |
 | A repo file carries script | DOMPurify's allowlist, below; then the CSP, which blocks inline script even if the sanitizer misses something. Every script, the libraries included, is served from the Worker |
 | A repo file carries a tracking pixel | accepted: `img-src` allows any `https:` host, for outside images and the diagram services. An `<img>` can't run code or reach the page, and the host doesn't get the page's address (`no-referrer`), but it sees that someone asked. No proxy sits in between |
-| Someone else calls `/api/token` | `POST` only, from no `Origin` or its own, with a JSON `code` and `code_verifier` or a JSON `refresh_token`. It returns only the tokens and their lifetimes, or GitHub's error name |
+| Someone else calls `/api/token` | `POST` only, from no `Origin` or its own, with a JSON `code` and `code_verifier` or a JSON `refresh_token`. It returns only the tokens and their lifetimes, or GitHub's error name; a refused request gets a bare error, never anything it sent. Which status a refusal gets is up to the framework |
 | An old deploy with a fixed bug stays reachable | preview URLs are off in `wrangler.toml`, so only the live version has an address |
 | A bill | Cloudflare free plan, no card. Static files are free and unlimited; past the free daily Worker requests only sign-in and renewal stop, until the next day |
 
@@ -280,9 +282,10 @@ X-Content-Type-Options: nosniff
 
 | Path | What |
 |---|---|
-| `wrangler.toml` | the Worker and the page's [settings](#settings) |
+| `wrangler.toml` | the Worker: its name, the static files, which path runs its code |
+| `public/config.json` | the page's [settings](#settings) |
 | `github-app.json` | the GitHub App's settings, as a manifest |
-| `worker/index.js` | the Worker: `/config.json` and `/api/token` |
+| `worker/index.js` | the Worker: `/api/token`, on Hono, with the body checked by Valibot |
 | `public/index.html`, `style.css`, `manifest.webmanifest`, `icons/` | the page's shell and its home-screen icons |
 | `public/app.js` | tabs, Now's sync and Commit, the Life and Repo views |
 | `public/github.js` | sign-in, renewal and GitHub calls |
@@ -290,8 +293,9 @@ X-Content-Type-Options: nosniff
 | `public/routes.js` | the hash routes and link resolving |
 | `public/markdown.js` | markdown-it and the sanitizer, set up for the page |
 | `public/diagrams.js` | the Mermaid and PlantUML image URLs |
-| `public/config.js` | the settings, read from `/config.json` |
+| `public/config.js` | the settings, read from `/config.json` and checked |
 | `public/_headers` | the security headers |
+| `public/404.html` | the answer for any path that isn't a file or `/api/token` |
 | `public/vendor/` | markdown-it and DOMPurify, copied from `node_modules` by `make vendor`, gitignored; loaded as plain scripts that set the globals `markdownit` and `DOMPurify` |
 | `types/` | declarations for the type checker, such as those globals |
 | `tests/` | Vitest, offline, with `fetch` stubbed; the markdown tests run under jsdom, since DOMPurify needs a DOM |

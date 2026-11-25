@@ -1,4 +1,4 @@
-# The Cloudflare Worker: fill in name and [vars] (SETUP.md).
+# The Cloudflare Worker: fill in name (SETUP.md); the page's settings are public/config.json.
 name = "md-viewer-phone"
 main = "worker/index.js"
 compatibility_date = "2026-11-01"
@@ -6,19 +6,13 @@ workers_dev = true
 # No per-version preview URLs, so only the live version can be reached (DESIGN.md, Security).
 preview_urls = false
 
-# public/ is served as static assets; the Worker's code runs only for paths with no file,
-# /config.json and /api/token.
+# public/ is served as static files, free and not counted as Worker requests. Only /api/token
+# runs the Worker's code; any other path with no file gets public/404.html (DESIGN.md,
+# Architecture). The page's settings are public/config.json (DESIGN.md, Settings).
 [assets]
 directory = "./public"
-
-# The page's settings, served as /config.json (DESIGN.md, Settings).
-[vars]
-# The repo to read, owner/name; branch main.
-REPO = ""
-# The GitHub App's client ID (SETUP.md, Steps 2).
-GITHUB_CLIENT_ID = ""
-# The notes file the Now tab edits; its folder is the Life tab. Leave empty for Repo only.
-NOW_FILE = ""
+run_worker_first = ["/api/token"]
+not_found_handling = "404-page"
 
 # The client secret is a Wrangler secret (SETUP.md, Secrets):
 # GITHUB_CLIENT_SECRET = <DO NOT PUT HERE; set with `wrangler secret put GITHUB_CLIENT_SECRET`>

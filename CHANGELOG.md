@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0 - 2026-11-25
+
+- Settings: the repo, the GitHub App's client ID and the `now.md` path move from the Worker's
+  `[vars]` to `public/config.json`, a static file. Loading the page no longer runs the Worker, so
+  it no longer counts toward the free plan's daily Worker requests. A copy of your own moves its
+  three values there.
+- Only `/api/token` runs the Worker's code; any other path that isn't a file gets a static 404
+  page, so stray requests don't count either.
+- The Worker runs on Hono, with the token request's body checked by Valibot. A refused request
+  gets a bare error, never what it sent; its status code may differ from before.
+
 ## 0.10.0 - 2026-11-23
 
 - Life and Repo: images from other sites load, at the `width` and `height` the file gives; in a
